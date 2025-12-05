@@ -1,0 +1,55 @@
+{
+  "room": {
+    "length_m": 9.1,
+    "width_m": 7.6,
+    "height_m": 2.7,
+    "shape": "rect",
+    "window_wall": "north"
+  },
+  "people": {
+    "students": 28,
+    "teachers": 1,
+    "seated_fraction": 0.9
+  },
+  "loads": {
+    "deltaT_C": -8,
+    "mode": "cooling"
+  },
+  "standard": {
+    "type": "ASHRAE_62_1",
+    "edition": "2022",
+    "eca_target_cfm": null
+  },
+  "ventilation": {
+    "supply_total_cfm": 1200,
+    "infiltration_cfm": 0
+  },
+  "diffusers": {
+    "selection": [
+      {
+        "type": "ceiling_4way",
+        "model_id": "example_square_cone",
+        "count": 4,
+        "neck_size_in": 8
+      }
+    ],
+    "constraints": {
+      "min_from_walls_m": 1.2,
+      "min_from_board_m": 1.2,
+      "face_velocity_fpm_max": 700
+    }
+  },
+  "returns": {
+    "locations": [
+      {
+        "x": 4.6,
+        "y": 3.8
+      }
+    ]
+  },
+  "solver": {
+    "optimize_layout": true,
+    "grid_spacing_m": 0.6,
+    "time_budget_ms": 2000
+  }
+}
