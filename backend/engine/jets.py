@@ -25,11 +25,12 @@ def _interpolate_throw(model: dict, cfm: float, key: str="50") -> float:
                 break
     return val_ft * 0.3048
 
+# backend/engine/jets.py
 def velocity_field(G, diffuser_locs, per_cfm, model_id):
     model = _load_any_model(model_id)
     T50_m = _interpolate_throw(model, per_cfm, key="50")
-    sigma = max(0.5, 0.35 * T50_m)
-    U0 = max(0.1, per_cfm/1000.0)
+    sigma = max(0.6, 0.50 * T50_m)           # wider spread
+    U0 = max(0.08, 0.00025 * per_cfm + 0.05) # lower amplitude baseline
 
     field = np.zeros((G.shape[0], G.shape[1], 2), dtype=float)
     for (x0,y0) in diffuser_locs:
@@ -40,7 +41,16 @@ def velocity_field(G, diffuser_locs, per_cfm, model_id):
         norm = np.sqrt(r2) + 1e-6
         field[:,:,0] += amp * dx / norm
         field[:,:,1] += amp * dy / norm
+
+    # Post-normalize to cap high-velocity tails at occupied height
+    Vmag = np.linalg.norm(field, axis=2)
+    v95 = float(np.percentile(Vmag, 95))
+    target_v95 = 0.30  # choose 0.30–0.35 m/s
+    if v95 > target_v95 and v95 > 1e-6:
+        field *= (target_v95 / v95)
+
     return field
+
 
 def return_bias(G, returns, strength=0.05):
     fb = np.zeros((G.shape[0], G.shape[1], 2), dtype=float)

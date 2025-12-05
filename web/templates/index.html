@@ -1,0 +1,66 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classroom Air Distribution</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Classroom Air Distribution</h1>
+    <p>Enter room and system info, then click Predict.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Inputs</h2>
+      <form id="predict-form">
+        <div class="grid">
+          <label>Length (m)<input type="number" step="0.01" id="length_m" value="9.1"/></label>
+          <label>Width (m)<input type="number" step="0.01" id="width_m" value="7.6"/></label>
+          <label>Height (m)<input type="number" step="0.01" id="height_m" value="2.7"/></label>
+          <label>DeltaT (C, supply - room)<input type="number" step="0.1" id="deltaT_C" value="-8"/></label>
+          <label>Total Supply (cfm)<input type="number" step="1" id="supply_total_cfm" value="1200"/></label>
+          <label>Students<input type="number" id="students" value="28"/></label>
+          <label>Teachers<input type="number" id="teachers" value="1"/></label>
+          <label>Diffusers (count)<input type="number" id="diffuser_count" value="4"/></label>
+          <label>Diffuser model<select id="model_id">
+            <option value="example_square_cone">example_square_cone</option>
+            <option value="example_4way_plaque">example_4way_plaque</option>
+          </select></label>
+          <label>Grid spacing (m)<input type="number" step="0.1" id="grid_spacing_m" value="0.6"/></label>
+        </div>
+        <div class="actions">
+          <button type="submit">Predict</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" id="results" hidden>
+      <h2>Results</h2>
+      <div id="kpis" class="kpis"></div>
+      <div class="images">
+        <figure>
+          <img id="img-vel" alt="Velocity heatmap" />
+          <figcaption>Velocity magnitude @ occupied height</figcaption>
+        </figure>
+        <figure>
+          <img id="img-edt" alt="EDT histogram" />
+          <figcaption>EDT distribution</figcaption>
+        </figure>
+      </div>
+      <div class="downloads">
+        <a id="csv-link" href="#" download>Download coordinates CSV</a>
+      </div>
+      <details>
+        <summary>Raw JSON</summary>
+        <pre id="raw"></pre>
+      </details>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
