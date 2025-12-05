@@ -1,6 +1,5 @@
 
 def greedy_layout(G, count=4, min_wall=1.2):
-    # Basic 2x2 for count==4; else center + near-quadrants.
     if count == 4:
         return [(G.Lx*0.3, G.Ly*0.3), (G.Lx*0.3, G.Ly*0.7),
                 (G.Lx*0.7, G.Ly*0.3), (G.Lx*0.7, G.Ly*0.7)]

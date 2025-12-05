@@ -3,7 +3,6 @@ import os
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from ..schemas import PredictRequest, PredictResponse
-from ..settings import settings
 from ...engine import grid as gridmod
 from ...engine import jets, edt_adpi, compliance, optimizer, uncertainty as uncty
 import numpy as np
@@ -44,13 +43,10 @@ def predict(req: PredictRequest):
 
     u_level, u_pp, drivers = uncty.estimate(req, locs, stats)
 
-    os.makedirs(settings.artifacts_dir, exist_ok=True)
-    heatmap_png = os.path.join(settings.artifacts_dir, "adpi_map.png")
-    hist_png = os.path.join(settings.artifacts_dir, "edt_hist.png")
-    csv_path = os.path.join(settings.artifacts_dir, "layout.csv")
-    figures.save_velocity_heatmap(G, Vmag, locs, returns, heatmap_png)
-    figures.save_edt_histogram(stats["edt_values"], hist_png)
-    figures.save_layout_csv(locs, per_cfm, csv_path)
+    os.makedirs("artifacts", exist_ok=True)
+    figures.save_velocity_heatmap(G, Vmag, locs, returns, "artifacts/adpi_map.png")
+    figures.save_edt_histogram(stats["edt_values"], "artifacts/edt_hist.png")
+    figures.save_layout_csv(locs, per_cfm, "artifacts/layout.csv")
 
     resp = {
         "adpi": round(float(adpi), 3),
@@ -61,10 +57,8 @@ def predict(req: PredictRequest):
             "v50_mps": round(float(np.percentile(Vmag, 50)), 3),
             "v95_mps": round(float(np.percentile(Vmag, 95)), 3),
         },
-        "edt": {
-            "pass_fraction": round(float(stats["edt_pass_fraction"]), 3),
-            "histogram_bins": stats["edt_hist"]
-        },
+        "edt": {"pass_fraction": round(float(stats["edt_pass_fraction"]), 3),
+                "histogram_bins": stats["edt_hist"]},
         "draft_risk_area_pct": round(float(draft_area), 2),
         "compliance": comp,
         "layout": {
@@ -79,10 +73,6 @@ def predict(req: PredictRequest):
             "edt_hist_png_url": "/artifacts/edt_hist.png",
             "coordinates_csv_url": "/artifacts/layout.csv",
         },
-        "provenance": {
-            "engine_version": "0.1.0",
-            "catalog_version": "v0",
-            "assumption_preset": "K12_mixing_v1"
-        }
+        "provenance": {"engine_version": "0.1.1", "catalog_version": "v0", "assumption_preset": "K12_mixing_v1"}
     }
     return JSONResponse(resp)

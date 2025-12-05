@@ -1,16 +1,13 @@
 
 import json, os
 import numpy as np
-from ..app.settings import settings
 
 def _load_any_model(model_id: str):
-    path1 = os.path.join(settings.catalog_dir, model_id)
-    if os.path.exists(path1):
-        with open(path1) as f: return json.load(f)
-    path2 = os.path.join(settings.catalog_dir, f"{model_id}.json")
-    if os.path.exists(path2):
-        with open(path2) as f: return json.load(f)
-    with open(os.path.join(settings.catalog_dir, "example_square_cone.json")) as f:
+    # Use shipped example catalog only (users can replace with vendor data)
+    path = os.path.join("data", "catalogs", "v0", f"{model_id}.json")
+    if not os.path.exists(path):
+        path = os.path.join("data", "catalogs", "v0", "example_square_cone.json")
+    with open(path) as f:
         return json.load(f)
 
 def _interpolate_throw(model: dict, cfm: float, key: str="50") -> float:
@@ -26,10 +23,9 @@ def _interpolate_throw(model: dict, cfm: float, key: str="50") -> float:
                 t = (cfm - xs[i])/(xs[i+1]-xs[i])
                 val_ft = ys_ft[i]*(1-t) + ys_ft[i+1]*t
                 break
-    return val_ft * 0.3048  # feet to meters
+    return val_ft * 0.3048
 
 def velocity_field(G, diffuser_locs, per_cfm, model_id):
-    # 2D radial Gaussian footprint based on T50 to approximate plan-view velocity
     model = _load_any_model(model_id)
     T50_m = _interpolate_throw(model, per_cfm, key="50")
     sigma = max(0.5, 0.35 * T50_m)
@@ -42,10 +38,8 @@ def velocity_field(G, diffuser_locs, per_cfm, model_id):
         r2 = dx*dx + dy*dy
         amp = U0 * np.exp(-r2/(2*sigma*sigma))
         norm = np.sqrt(r2) + 1e-6
-        ux = amp * dx / norm
-        uy = amp * dy / norm
-        field[:,:,0] += ux
-        field[:,:,1] += uy
+        field[:,:,0] += amp * dx / norm
+        field[:,:,1] += amp * dy / norm
     return field
 
 def return_bias(G, returns, strength=0.05):

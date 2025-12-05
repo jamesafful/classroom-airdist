@@ -1,10 +1,5 @@
 
 import numpy as np
-import yaml, os
-from ..app.settings import settings
-
-with open(settings.constants_file) as f:
-    C = yaml.safe_load(f)
 
 def local_temperature(Vmag, Tr=24.0, deltaT_C=-8.0):
     gamma = 2.0
@@ -18,13 +13,13 @@ def edt_field(Tx, Tr, Vmag):
 def compute_metrics(Vmag, Tx):
     Tr = 24.0
     edt = edt_field(Tx, Tr, Vmag)
-    Tmin = C["edt"]["Tmin_C"]
-    Tmax = C["edt"]["Tmax_C"]
-    vmax = C["edt"]["vmax_mps"]
+    Tmin = -1.7
+    Tmax = 1.1
+    vmax = 0.35
     pass_mask = (edt >= Tmin) & (edt <= Tmax) & (Vmag < vmax)
     adpi = float(np.mean(pass_mask))
-    pct_low = 100.0 * float(np.mean(Vmag < C["occupied_zone"]["v_low_mps"]))
-    pct_high = 100.0 * float(np.mean(Vmag > C["occupied_zone"]["v_high_mps"]))
+    pct_low = 100.0 * float(np.mean(Vmag < 0.05))
+    pct_high = 100.0 * float(np.mean(Vmag > 0.25))
     draft_area = pct_high
     hist, bin_edges = np.histogram(edt, bins=20, range=(-3.0, 2.0))
     hist_bins = [{"bin": float((bin_edges[i]+bin_edges[i+1])/2), "count": int(hist[i])} for i in range(len(hist))]

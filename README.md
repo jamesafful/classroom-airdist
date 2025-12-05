@@ -1,17 +1,9 @@
 
-# classroom-airdist
+# classroom-airdist (fixed for Codespaces)
 
-A fast, trustworthy mixing-mode air distribution design assistant for K-12 classrooms.
+Same project, with packaging configured for editable install on GitHub Codespaces.
 
-- Predicts ADPI, EDT histogram, draft-risk bands
-- Computes ASHRAE 62.1 VRP breathing-zone airflow (classroom category defaults)
-- Suggests diffuser layout + per-diffuser CFM
-- Exports PNG heatmaps, CSV coordinates
-- REST API via FastAPI (/predict, /report)
-
-Scope (MVP): Overhead mixing ventilation in cooling mode, rectangular rooms. This is a design-assist tool; the engineer of record must review/approve.
-
-## Quickstart (Codespaces / local)
+## Quickstart
 ```bash
 pip install -U pip
 pip install -e .

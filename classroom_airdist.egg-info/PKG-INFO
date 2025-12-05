@@ -1,0 +1,29 @@
+Metadata-Version: 2.4
+Name: classroom-airdist
+Version: 0.1.1
+Summary: Mixing-mode air distribution design assistant for K-12 classrooms
+Author: Team
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn>=0.30.0
+Requires-Dist: pydantic>=2.7.0
+Requires-Dist: pydantic-settings>=2.2.1
+Requires-Dist: numpy>=1.26.0
+Requires-Dist: matplotlib>=3.8.0
+Dynamic: license-file
+
+
+# classroom-airdist (fixed for Codespaces)
+
+Same project, with packaging configured for editable install on GitHub Codespaces.
+
+## Quickstart
+```bash
+pip install -U pip
+pip install -e .
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+# http://localhost:8000/docs
+```

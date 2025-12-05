@@ -7,16 +7,6 @@ edt:
   Tmin_C: -1.7
   Tmax_C: 1.1
   vmax_mps: 0.35
-defaults:
-  seated_fraction: 0.9
-  deltaT_C: -8.0
-  face_velocity_fpm_max: 700
 classroom_vrp:
   Rp_cfm_per_person: 10.0
   Ra_cfm_per_ft2: 0.12
-uncertainty_triggers:
-  low_ceiling_m: 2.7
-  large_deltaT_mag_C: 12.0
-  wall_proximity_ratio: 1.0
-sound:
-  nc_warn: 40

@@ -47,23 +47,5 @@
         "throw_ft": 31
       }
     ]
-  },
-  "recommended_deltaT_C": [
-    -12,
-    -6
-  ],
-  "nc_vs_face_velocity": [
-    {
-      "fpm": 600,
-      "nc": 35
-    },
-    {
-      "fpm": 700,
-      "nc": 40
-    }
-  ],
-  "fit_metadata": {
-    "date": "2025-12-04",
-    "r2_centerline": 0.9
   }
 }
