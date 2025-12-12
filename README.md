@@ -1,5 +1,5 @@
 
-# classroom-airdist (fixed for Codespaces)
+# classroom-airdist 
 
 Same project, with packaging configured for editable install on GitHub Codespaces.
 
