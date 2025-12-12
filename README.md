@@ -1,7 +1,7 @@
 
 # classroom-airdist 
 
-Same project, with packaging configured for editable install on GitHub Codespaces.
+Same project, with packaging configured for install on GitHub Codespaces.
 
 ## Quickstart
 ```bash

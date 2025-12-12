@@ -16,7 +16,8 @@ def compute_metrics(Vmag, Tx):
     Tmin = -1.7
     Tmax = 1.1
     vmax = 0.35
-    pass_mask = (edt >= Tmin) & (edt <= Tmax) & (Vmag < vmax)
+    pass_mask = (edt >= -1.7) & (edt <= 1.1) & (Vmag >= 0.15) & (Vmag <= 0.35)
+#    pass_mask = (edt >= Tmin) & (edt <= Tmax) & (Vmag < vmax)
     adpi = float(np.mean(pass_mask))
     pct_low = 100.0 * float(np.mean(Vmag < 0.05))
     pct_high = 100.0 * float(np.mean(Vmag > 0.25))

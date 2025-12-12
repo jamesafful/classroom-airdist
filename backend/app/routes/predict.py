@@ -1,4 +1,3 @@
-
 import os
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -12,42 +11,61 @@ router = APIRouter(prefix="/predict", tags=["predict"])
 
 @router.post("", response_model=PredictResponse)
 def predict(req: PredictRequest):
-    G = gridmod.Grid2D(req.room.length_m, req.room.width_m, spacing=req.solver.grid_spacing_m)
+    # --- Grid creation with a safe lower bound on spacing ---
+    # allow fine grids from the UI, but prevent pathological cell counts
+    spacing = max(0.05, float(req.solver.grid_spacing_m))  # allow <0.1; floor at 5 cm
+    G = gridmod.Grid2D(req.room.length_m, req.room.width_m, spacing=spacing)
 
     sel = req.diffusers.selection[0]
-    count = sel.count
-    if req.solver.optimize_layout or not sel.existing_locations:
-        locs = optimizer.greedy_layout(G, count=count, min_wall=req.diffusers.constraints.min_from_walls_m)
-    else:
-        locs = [(p["x"], p["y"]) for p in (sel.existing_locations or [])]
+    count = int(sel.count)
 
+    # --- Diffuser placement: manual beats auto ---
+    if req.solver.optimize_layout or not sel.existing_locations:
+        # >>> IMPORTANT: pass explicit L/W to avoid optimizer guessing Grid2D internals
+        locs = optimizer.greedy_layout(
+            G,
+            count=count,
+            min_wall=req.diffusers.constraints.min_from_walls_m,
+            L=req.room.length_m,
+            W=req.room.width_m,
+        )
+    else:
+        locs = [(float(p["x"]), float(p["y"])) for p in (sel.existing_locations or [])]
+
+    # --- Even CFM split for now (extend later to per-outlet) ---
     total_cfm = float(req.ventilation.supply_total_cfm)
     per_cfm = total_cfm / max(1, len(locs))
 
+    # --- Velocity field (supply + optional return bias) ---
     field = jets.velocity_field(G, locs, per_cfm, sel.model_id)
 
-    returns = [(r["x"], r["y"]) for r in req.returns.locations]
+    returns = [(float(r["x"]), float(r["y"])) for r in req.returns.locations]
     if returns:
-        field += jets.return_bias(G, returns, strength=0.05)
+        field += jets.return_bias(G, returns, strength=0.05)  # supports multiple returns
 
-    deltaT = req.loads.deltaT_C
+    # --- Metrics ---
+    deltaT = float(req.loads.deltaT_C)
     Vmag = np.linalg.norm(field, axis=2)
     Tx = edt_adpi.local_temperature(Vmag, Tr=24.0, deltaT_C=deltaT)
     stats = edt_adpi.compute_metrics(Vmag, Tx)
     adpi = stats["adpi"]
     draft_area = stats["draft_risk_area_pct"]
 
-    comp = compliance.vrp_classroom(req.people.students + req.people.teachers,
-                                    area_m2=req.room.length_m * req.room.width_m,
-                                    supply_cfm=total_cfm)
+    comp = compliance.vrp_classroom(
+        req.people.students + req.people.teachers,
+        area_m2=req.room.length_m * req.room.width_m,
+        supply_cfm=total_cfm,
+    )
 
     u_level, u_pp, drivers = uncty.estimate(req, locs, stats)
 
+    # --- Artifacts ---
     os.makedirs("artifacts", exist_ok=True)
     figures.save_velocity_heatmap(G, Vmag, locs, returns, "artifacts/adpi_map.png")
     figures.save_edt_histogram(stats["edt_values"], "artifacts/edt_hist.png")
     figures.save_layout_csv(locs, per_cfm, "artifacts/layout.csv")
 
+    # --- Response ---
     resp = {
         "adpi": round(float(adpi), 3),
         "adpi_uncertainty_pp": float(u_pp),
@@ -57,14 +75,16 @@ def predict(req: PredictRequest):
             "v50_mps": round(float(np.percentile(Vmag, 50)), 3),
             "v95_mps": round(float(np.percentile(Vmag, 95)), 3),
         },
-        "edt": {"pass_fraction": round(float(stats["edt_pass_fraction"]), 3),
-                "histogram_bins": stats["edt_hist"]},
+        "edt": {
+            "pass_fraction": round(float(stats["edt_pass_fraction"]), 3),
+            "histogram_bins": stats["edt_hist"],
+        },
         "draft_risk_area_pct": round(float(draft_area), 2),
         "compliance": comp,
         "layout": {
-            "diffusers": [{"x": x, "y": y, "cfm": round(per_cfm,1)} for (x,y) in locs],
+            "diffusers": [{"x": x, "y": y, "cfm": round(per_cfm, 1)} for (x, y) in locs],
             "model": sel.model_id,
-            "returns": [{"x": x, "y": y} for (x,y) in returns]
+            "returns": [{"x": x, "y": y} for (x, y) in returns],
         },
         "warnings": stats["warnings"],
         "uncertainty": {"level": u_level, "drivers": drivers},
@@ -73,6 +93,10 @@ def predict(req: PredictRequest):
             "edt_hist_png_url": "/artifacts/edt_hist.png",
             "coordinates_csv_url": "/artifacts/layout.csv",
         },
-        "provenance": {"engine_version": "0.1.1", "catalog_version": "v0", "assumption_preset": "K12_mixing_v1"}
+        "provenance": {
+            "engine_version": "0.1.1",
+            "catalog_version": "v0",
+            "assumption_preset": "K12_mixing_v1",
+        },
     }
     return JSONResponse(resp)

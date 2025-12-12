@@ -16,9 +16,9 @@ Requires-Dist: matplotlib>=3.8.0
 Dynamic: license-file
 
 
-# classroom-airdist (fixed for Codespaces)
+# classroom-airdist 
 
-Same project, with packaging configured for editable install on GitHub Codespaces.
+Same project, with packaging configured for install on GitHub Codespaces.
 
 ## Quickstart
 ```bash

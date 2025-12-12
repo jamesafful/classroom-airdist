@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,11 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classroom Air Distribution</title>
   <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; color: #0b1220; }
+    header { padding: 24px 16px; background: #0b1220; color: #fff; }
+    main { padding: 16px; max-width: 1000px; margin: 0 auto; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+    label { display: grid; gap: 6px; font-size: 14px; color: #334155; }
+    input[type="number"], select, textarea { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; font: inherit; }
+    textarea { min-height: 72px; }
+    .actions { margin-top: 12px; }
+    button { background: #2563eb; color: #fff; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .kpi { background: #0b1220; color: #fff; border-radius: 12px; padding: 12px; }
+    figure { margin: 0; }
+    .images { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .downloads { margin-top: 10px; }
+    .muted { color: #64748b; font-size: 12px; }
+  </style>
 </head>
 <body>
   <header>
     <h1>Classroom Air Distribution</h1>
-    <p>Enter room and system info, then click Predict.</p>
+    <p class="muted">Enter room and system info, then click Predict. (You can optionally specify diffuser/return coordinates.)</p>
   </header>
 
   <main>
@@ -18,23 +36,58 @@
       <h2>Inputs</h2>
       <form id="predict-form">
         <div class="grid">
-          <label>Length (m)<input type="number" step="0.01" id="length_m" value="9.1"/></label>
-          <label>Width (m)<input type="number" step="0.01" id="width_m" value="7.6"/></label>
-          <label>Height (m)<input type="number" step="0.01" id="height_m" value="2.7"/></label>
-          <label>DeltaT (C, supply - room)<input type="number" step="0.1" id="deltaT_C" value="-8"/></label>
-          <label>Total Supply (cfm)<input type="number" step="1" id="supply_total_cfm" value="1200"/></label>
-          <label>Students<input type="number" id="students" value="28"/></label>
-          <label>Teachers<input type="number" id="teachers" value="1"/></label>
-          <label>Diffusers (count)<input type="number" id="diffuser_count" value="4"/></label>
-          <label>Diffuser model<select id="model_id">
-            <option value="example_square_cone">example_square_cone</option>
-            <option value="example_4way_plaque">example_4way_plaque</option>
-          </select></label>
-          <label>Grid spacing (m)<input type="number" step="0.1" id="grid_spacing_m" value="0.6"/></label>
+          <label>Length (m)
+            <input type="number" step="0.01" id="length_m" value="9.1" required />
+          </label>
+          <label>Width (m)
+            <input type="number" step="0.01" id="width_m" value="7.6" required />
+          </label>
+          <label>Height (m)
+            <input type="number" step="0.01" id="height_m" value="2.7" required />
+          </label>
+          <label>DeltaT (°C, supply - room)
+            <input type="number" step="0.1" id="deltaT_C" value="-8" required />
+          </label>
+          <label>Total Supply (cfm)
+            <input type="number" step="0.1" id="supply_total_cfm" value="1200" required />
+          </label>
+          <label>Students
+            <input type="number" id="students" value="28" required />
+          </label>
+          <label>Teachers
+            <input type="number" id="teachers" value="1" required />
+          </label>
+          <label>Diffusers (count)
+            <input type="number" id="diffuser_count" value="4" required />
+          </label>
+          <label>Diffuser model
+            <select id="model_id">
+              <option value="example_square_cone">example_square_cone</option>
+              <option value="example_4way_plaque">example_4way_plaque</option>
+            </select>
+          </label>
+          <label>Grid spacing (m)
+            <input type="number" step="0.01" id="grid_spacing_m" value="0.1" required />
+          </label>
         </div>
-        <div class="actions">
-          <button type="submit">Predict</button>
-        </div>
+
+        <details style="margin-top:10px">
+          <summary><strong>Manual placement (optional)</strong></summary>
+          <div class="grid" style="margin-top:8px">
+            <label>Diffuser coordinates (JSON array of {x,y})
+              <textarea id="diffuser_coords" placeholder='[{"x":3.0,"y":2.5},{"x":3.0,"y":5.1},{"x":6.1,"y":2.5},{"x":6.1,"y":5.1}]'></textarea>
+            </label>
+            <label>Return coordinates (JSON array of {x,y})
+              <textarea id="return_coords" placeholder='[{"x":4.55,"y":3.80}]'></textarea>
+            </label>
+            <label>
+              <input type="checkbox" id="use_manual" /> Use my diffuser coordinates (disable auto-layout)
+            </label>
+            <p class="muted">If checked, the backend will use your diffuser coordinates and set <code>solver.optimize_layout=false</code>. If unchecked, it will auto-place diffusers and ignore any diffuser coordinates here.</p>
+          </div>
+        </details>
+
+        <div class="actions"><button type="submit">Predict</button></div>
       </form>
     </section>
 
