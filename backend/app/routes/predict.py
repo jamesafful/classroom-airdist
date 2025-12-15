@@ -81,7 +81,11 @@ def predict(req: PredictRequest):
 
     # --- Artifacts ---
     os.makedirs("artifacts", exist_ok=True)
-    figures.save_velocity_heatmap(G, Vmag, locs, returns, "artifacts/adpi_map.png")
+    # figures.save_velocity_heatmap(G, Vmag, locs, returns, "artifacts/adpi_map.png")
+    figures.save_velocity_heatmap(G, Vmag, locs, returns, "artifacts/adpi_map.png",
+    extent=(0.0, float(req.room.length_m), 0.0, float(req.room.width_m))
+    )
+
     figures.save_edt_histogram(stats["edt_values"], "artifacts/edt_hist.png")
     figures.save_layout_csv(locs, per_cfm, "artifacts/layout.csv")
 
