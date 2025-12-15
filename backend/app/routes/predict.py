@@ -1,5 +1,6 @@
+# backend/app/routes/predict.py  (only the function body changed)
 import os
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from ..schemas import PredictRequest, PredictResponse
 from ...engine import grid as gridmod
@@ -12,16 +13,24 @@ router = APIRouter(prefix="/predict", tags=["predict"])
 @router.post("", response_model=PredictResponse)
 def predict(req: PredictRequest):
     # --- Grid creation with a safe lower bound on spacing ---
-    # allow fine grids from the UI, but prevent pathological cell counts
-    spacing = max(0.05, float(req.solver.grid_spacing_m))  # allow <0.1; floor at 5 cm
+    # Allow < 0.1 m from UI, but prevent pathological resolutions
+    spacing = max(0.05, float(req.solver.grid_spacing_m))  # floor at 5 cm
     G = gridmod.Grid2D(req.room.length_m, req.room.width_m, spacing=spacing)
 
     sel = req.diffusers.selection[0]
     count = int(sel.count)
 
-    # --- Diffuser placement: manual beats auto ---
-    if req.solver.optimize_layout or not sel.existing_locations:
-        # >>> IMPORTANT: pass explicit L/W to avoid optimizer guessing Grid2D internals
+    # --- Diffuser placement: MANUAL beats AUTO if provided ---
+    manual = getattr(sel, "existing_locations", None)
+    if manual and len(manual) > 0:
+        try:
+            locs = [(float(p["x"]), float(p["y"])) for p in manual]
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid diffuser existing_locations JSON; expected [{\"x\":..,\"y\":..}, ...].")
+        # Optionally sync count to manual list
+        if count != len(locs):
+            count = len(locs)
+    else:
         locs = optimizer.greedy_layout(
             G,
             count=count,
@@ -29,19 +38,30 @@ def predict(req: PredictRequest):
             L=req.room.length_m,
             W=req.room.width_m,
         )
-    else:
-        locs = [(float(p["x"]), float(p["y"])) for p in (sel.existing_locations or [])]
 
-    # --- Even CFM split for now (extend later to per-outlet) ---
+    # Bounds check for diffusers
+    for i, (x, y) in enumerate(locs):
+        if not (0.0 <= x <= req.room.length_m and 0.0 <= y <= req.room.width_m):
+            raise HTTPException(status_code=400, detail=f"Diffuser {i} out of bounds: ({x},{y})")
+
+    # --- Even CFM split for now ---
     total_cfm = float(req.ventilation.supply_total_cfm)
     per_cfm = total_cfm / max(1, len(locs))
 
     # --- Velocity field (supply + optional return bias) ---
     field = jets.velocity_field(G, locs, per_cfm, sel.model_id)
 
-    returns = [(float(r["x"]), float(r["y"])) for r in req.returns.locations]
+    # Returns: accept multiple; validate bounds
+    try:
+        returns = [(float(r["x"]), float(r["y"])) for r in req.returns.locations]
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid returns.locations JSON; expected [{\"x\":..,\"y\":..}, ...].")
+    for i, (x, y) in enumerate(returns):
+        if not (0.0 <= x <= req.room.length_m and 0.0 <= y <= req.room.width_m):
+            raise HTTPException(status_code=400, detail=f"Return {i} out of bounds: ({x},{y})")
+
     if returns:
-        field += jets.return_bias(G, returns, strength=0.05)  # supports multiple returns
+        field += jets.return_bias(G, returns, strength=0.05)
 
     # --- Metrics ---
     deltaT = float(req.loads.deltaT_C)
@@ -97,6 +117,14 @@ def predict(req: PredictRequest):
             "engine_version": "0.1.1",
             "catalog_version": "v0",
             "assumption_preset": "K12_mixing_v1",
+        },
+        # Debug echo: know exactly what was used
+        "debug": {
+            "optimize_layout_received": bool(req.solver.optimize_layout),
+            "used_diffusers": [{"x": x, "y": y} for (x, y) in locs],
+            "used_returns": [{"x": x, "y": y} for (x, y) in returns],
+            "grid_spacing_used_m": float(spacing),
+            "n_cells": int(Vmag.size),
         },
     }
     return JSONResponse(resp)

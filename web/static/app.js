@@ -1,3 +1,4 @@
+// web/static/app.js
 async function submitPredict(e){
   e.preventDefault();
 
@@ -13,7 +14,6 @@ async function submitPredict(e){
   const gridSpacing = parseFloat(document.getElementById('grid_spacing_m').value);
   const useManual = document.getElementById('use_manual')?.checked === true;
 
-  // helper to parse optional JSON textareas
   const parseJSONField = (elId, fallback) => {
     const el = document.getElementById(elId);
     if (!el) return fallback;
@@ -23,6 +23,7 @@ async function submitPredict(e){
     catch (e) { throw new Error(`${elId} contains invalid JSON`); }
   };
 
+  // Diffusers
   let diffuserLocs = null;
   if (useManual) {
     diffuserLocs = parseJSONField('diffuser_coords', null);
@@ -30,24 +31,16 @@ async function submitPredict(e){
       alert('Provide diffuser coordinates JSON or uncheck "Use my diffuser coordinates".');
       return;
     }
-    if (diffuserCount && diffuserLocs.length !== diffuserCount) {
-      const ok = confirm(`You set count=${diffuserCount} but provided ${diffuserLocs.length} coordinates. Continue anyway?`);
-      if (!ok) return;
-    }
   }
 
-  // let returnLocs = parseJSONField('return_coords', [{ x: L/2, y: W/2 }]);
-  // if (!Array.isArray(returnLocs) || returnLocs.length === 0) {
-  //   returnLocs = [{ x: L/2, y: W/2 }];
-  // }
-
-  let returnLocs = [{ x: L/2, y: W/2 }];
-  const rawR = (document.getElementById('return_coords')?.value || '').trim();
-  if (rawR) {
-    try { returnLocs = JSON.parse(rawR); }
-    catch { alert('Bad return coordinates JSON'); return; }
+  // Returns
+  let returnLocs = parseJSONField('return_coords', [{ x: L/2, y: W/2 }]);
+  if (!Array.isArray(returnLocs) || returnLocs.length === 0) {
+    returnLocs = [{ x: L/2, y: W/2 }];
   }
 
+  // If manual, sync count to number of points to avoid accidental trimming
+  const countToSend = useManual ? diffuserLocs.length : diffuserCount;
 
   const payload = {
     room: { length_m: L, width_m: W, height_m: H, shape: 'rect', window_wall: 'north' },
@@ -59,9 +52,9 @@ async function submitPredict(e){
       selection: [{
         type: 'ceiling_4way',
         model_id: modelId,
-        count: diffuserCount,
+        count: countToSend,
         neck_size_in: 8,
-        ...(useManual ? { existing_locations: diffuserLocs } : {}) // send coordinates only when manual is enabled
+        ...(useManual ? { existing_locations: diffuserLocs } : {})
       }],
       constraints: { min_from_walls_m: 1.2, min_from_board_m: 1.2, face_velocity_fpm_max: 700 }
     },
@@ -101,15 +94,13 @@ function renderResults(data){
   for (const [label, value] of items) {
     const div = document.createElement('div');
     div.className = 'kpi';
-    div.innerHTML = `<div class="muted" style="font-size:12px">${label}</div><div style="font-size:20px;font-weight:700">${value}</div>`;
+    div.innerHTML = `<div style="color:#64748b;font-size:12px">${label}</div><div style="font-size:20px;font-weight:700">${value}</div>`;
     k.appendChild(div);
   }
 
-  // Images + downloads + raw JSON
-  const heat = (data.artifacts?.heatmap_png_url || '/artifacts/adpi_map.png') + '?t=' + Date.now();
-  const edt  = (data.artifacts?.edt_hist_png_url || '/artifacts/edt_hist.png') + '?t=' + Date.now();
-  document.getElementById('img-vel').src = heat;
-  document.getElementById('img-edt').src = edt;
+  const cacheBust = '?t=' + Date.now();
+  document.getElementById('img-vel').src = (data.artifacts?.heatmap_png_url || '/artifacts/adpi_map.png') + cacheBust;
+  document.getElementById('img-edt').src = (data.artifacts?.edt_hist_png_url || '/artifacts/edt_hist.png') + cacheBust;
   document.getElementById('csv-link').href = data.artifacts?.coordinates_csv_url || '/artifacts/layout.csv';
   document.getElementById('raw').textContent = JSON.stringify(data, null, 2);
 }

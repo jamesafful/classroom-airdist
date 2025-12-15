@@ -44,13 +44,13 @@ def greedy_layout(
     L: float | None = None,
     W: float | None = None,
 ) -> List[Tuple[float, float]]:
-    """Public API compatible with existing calls.
-    We *optionally* take L/W; if not provided, attempt to infer from Grid2D without relying
-    on private names. If we can't infer, we raise a clear error.
+    """
+    Public API compatible with existing calls.
+    We optionally take L/W; if not provided, infer from Grid2D safely.
     """
     # Prefer explicit L/W from caller (most robust)
     if L is not None and W is not None:
-        return _grid_tiling(L, W, count, min_wall)
+        return _grid_tiling(float(L), float(W), int(count), float(min_wall))
 
     # Try to infer from common Grid2D attributes
     L_try = getattr(G, "length", None) or getattr(G, "L", None)
@@ -70,4 +70,4 @@ def greedy_layout(
             "Pass L=room.length_m, W=room.width_m from the route."
         )
 
-    return _grid_tiling(float(L_try), float(W_try), count, min_wall)
+    return _grid_tiling(float(L_try), float(W_try), int(count), float(min_wall))
