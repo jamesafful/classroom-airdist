@@ -1,11 +1,11 @@
-
+# backend/app/main.py
 import os
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from .routes.predict import router as predict_router
 
-app = FastAPI(title="Classroom Air Distribution API", version="0.2.0")
+app = FastAPI(title="Classroom Air Distribution API", version="0.3.0")
 app.include_router(predict_router)
 
 os.makedirs("artifacts", exist_ok=True)
@@ -24,3 +24,4 @@ def app_page():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+

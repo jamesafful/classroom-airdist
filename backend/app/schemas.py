@@ -1,12 +1,12 @@
-
-from pydantic import BaseModel, conlist
+# backend/app/schemas.py
+from pydantic import BaseModel, conlist, Field
 from typing import List, Optional, Literal, Dict, Any
 
 class Room(BaseModel):
     length_m: float
     width_m: float
     height_m: float
-    shape: Literal["rect", "l_preset"] = "rect"
+    shape: Literal["rect","l_preset"] = "rect"
     window_wall: Optional[Literal["north","south","east","west"]] = None
 
 class People(BaseModel):
@@ -46,6 +46,15 @@ class Diffusers(BaseModel):
 class Returns(BaseModel):
     locations: List[Dict[str,float]]
 
+class ComfortTuning(BaseModel):
+    # lets managers/engineers tune the comfort test without code edits
+    edt_min_C: float = -1.7
+    edt_max_C: float = +1.1
+    v_cap_mps: float = 0.35
+    # velocity normalization (set target to null to disable)
+    v95_target_mps: Optional[float] = Field(default=0.30, description="If set, scale field so v95≈target.")
+    v95_blend: float = 1.0  # 1.0 = full normalization
+
 class Solver(BaseModel):
     optimize_layout: bool = True
     grid_spacing_m: float = 0.6
@@ -59,6 +68,7 @@ class PredictRequest(BaseModel):
     ventilation: Ventilation
     diffusers: Diffusers
     returns: Returns
+    comfort: ComfortTuning = ComfortTuning()
     solver: Solver = Solver()
 
 class PredictResponse(BaseModel):
@@ -73,3 +83,11 @@ class PredictResponse(BaseModel):
     uncertainty: Dict[str, Any]
     artifacts: Dict[str, str]
     provenance: Dict[str, str]
+    debug: Optional[Dict[str, Any]] = None
+
+class PredictBatchRequest(BaseModel):
+    scenarios: List[PredictRequest]
+
+class PredictBatchResponse(BaseModel):
+    results: List[PredictResponse]
+

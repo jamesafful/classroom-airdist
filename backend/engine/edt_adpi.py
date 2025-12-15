@@ -1,32 +1,56 @@
-
+# backend/engine/edt_adpi.py
 import numpy as np
 
 def local_temperature(Vmag, Tr=24.0, deltaT_C=-8.0):
-    gamma = 2.0
+    """
+    Simple mixing model: colder supply air warms toward room temp
+    as local velocity increases (more mixing).
+    """
+    gamma = 2.0                     # mixing sensitivity
     mix = np.exp(-gamma * np.clip(Vmag, 0, 1.0))
     Tx = Tr + deltaT_C * (1.0 - mix)
     return Tx
 
 def edt_field(Tx, Tr, Vmag):
+    """
+    Effective Draft Temperature (EDT) proxy:
+    (Tx - Tr) - 8 * (V - 0.15)
+    """
     return (Tx - Tr) - 8.0 * (Vmag - 0.15)
 
-def compute_metrics(Vmag, Tx):
+def compute_metrics(Vmag, Tx, Tmin=-1.7, Tmax=1.1, vmax=0.35):
+    """
+    Evaluate comfort pass/fail and summary stats.
+
+    Parameters
+    ----------
+    Vmag : np.ndarray  (ny, nx) local speeds (m/s)
+    Tx   : np.ndarray  (ny, nx) local temp (°C)
+    Tmin : float       EDT minimum (°C)
+    Tmax : float       EDT maximum (°C)
+    vmax : float       velocity upper cap for comfort (m/s)
+    """
     Tr = 24.0
     edt = edt_field(Tx, Tr, Vmag)
-    Tmin = -1.7
-    Tmax = 1.1
-    vmax = 0.35
-    pass_mask = (edt >= -1.7) & (edt <= 1.1) & (Vmag >= 0.15) & (Vmag <= 0.35)
-#    pass_mask = (edt >= Tmin) & (edt <= Tmax) & (Vmag < vmax)
+    pass_mask = (edt >= Tmin) & (edt <= Tmax) & (Vmag < vmax)
+
     adpi = float(np.mean(pass_mask))
-    pct_low = 100.0 * float(np.mean(Vmag < 0.05))
-    pct_high = 100.0 * float(np.mean(Vmag > 0.25))
+    pct_low = 100.0 * float(np.mean(Vmag < 0.05))    # stagnation area
+    pct_high = 100.0 * float(np.mean(Vmag > 0.25))   # draft-prone proxy
     draft_area = pct_high
+
     hist, bin_edges = np.histogram(edt, bins=20, range=(-3.0, 2.0))
-    hist_bins = [{"bin": float((bin_edges[i]+bin_edges[i+1])/2), "count": int(hist[i])} for i in range(len(hist))]
+    hist_bins = [{"bin": float((bin_edges[i]+bin_edges[i+1])/2), "count": int(hist[i])}
+                 for i in range(len(hist))]
+
     warnings = []
-    if pct_high > 10.0: warnings.append("High-velocity area >10% of occupied zone")
-    if pct_low > 25.0: warnings.append("Large stagnation area (V<0.05 m/s)")
+    if pct_high > 10.0:
+        warnings.append("High-velocity area >10% of occupied zone")
+    if pct_low > 25.0:
+        warnings.append("Large stagnation area (V<0.05 m/s)")
+    if adpi == 0.0 and pct_low < 25.0:
+        warnings.append("EDT outside comfort band; consider tuning thresholds or raising mixing")
+
     return {
         "adpi": adpi,
         "pct_v_lt_0_05": pct_low,
@@ -37,3 +61,4 @@ def compute_metrics(Vmag, Tx):
         "edt_values": edt.flatten().tolist(),
         "warnings": warnings,
     }
+
